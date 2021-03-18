@@ -7,7 +7,6 @@ import time
 import json
 import re
 
-
 from multiprocessing import Pool
 from Levenshtein import distance
 
@@ -17,27 +16,28 @@ from .utils import get_config, filter_mod
 
 OWN_INVENTORY_ORIGIN = (0.6769531, 0.567361)
 SOCKETS = {
-1: (-650.565, -376.013),
-2: (648.905, -396.45),
-3: (6.3354, 765.658),
-4: (-1700.9, 2424.17),
-5: (-2800.66, -215.34),
-6: (-1435.02, -2635.39),
-7: (1855.53, -2360.1),
-8: (2835.84, 230.5361),
-9: (1225.37, 2625.76),
-10: (-120.12471, 5195.44),
-11: (-3580.19, 5905.92),
-12: (-5395.86, 2120.42),
-13: (-6030.95, -115.7007),
-14: (-5400.59, -1985.18),
-15: (-3035.14, -5400.87),
-16: (160.10728, -5196.32),
-17: (3382.05, -5195.21),
-18: (5730.2, -1625.75),
-19: (6465.24, 190.3341),
-20: (5542.76, 1690.07),
-21: (3322.76, 6090.5)}
+    1: (-650.565, -1376.013),
+    2: (648.905, -1396.45),
+    3: (6.3354, -234.34199999999998),
+    4: (-1700.9, 1424.17),
+    5: (-2800.66, -1215.34),
+    6: (-1435.02, -3635.39),
+    7: (1855.53, -3360.1),
+    8: (2835.84, -769.4639),
+    9: (1225.37, 1625.7600000000002),
+    10: (-120.12471, 4195.44),
+    11: (-3580.19, 4905.92),
+    12: (-5395.86, 1120.42),
+    13: (-6030.95, -1115.7007),
+    14: (-5400.59, -2985.1800000000003),
+    15: (-3035.14, -6400.87),
+    16: (160.10728, -6196.32),
+    17: (3382.05, -6195.21),
+    18: (5730.2, -2625.75),
+    19: (6465.24, -809.6659),
+    20: (5542.76, 690.0699999999999),
+    21: (3322.76, 5090.5),
+}
 
 SOCKET_MOVE_OFFSET = {
 1: (0, 150),
@@ -118,7 +118,7 @@ class TreeNavigator:
         return not bool(self.halt.value)
 
     def eval_jewel(self, item_location):
-        self.ingame_pos = [0, 0]
+        # self.ingame_pos = [0, 0]
         item_name, item_desc = self._setup(item_location, copy=True)
 
         pool = Pool(self.config['ocr_threads'])
@@ -134,6 +134,7 @@ class TreeNavigator:
             jobs[socket_id] = pool.map_async(OCR.node_to_strings, socket_nodes)
             self.log.info('Analyzed socket %s' % socket_id)
 
+        self._reset_tree()
         self._setup(item_location)
         self.log.info('Waiting for last OCR to finish')
         item_stats = [{'socket_id': socket_id,
@@ -170,6 +171,7 @@ class TreeNavigator:
         self.log.debug('Moving close to socket %s' % socket_id)
         move_offset_tx, move_offset_ty = SOCKET_MOVE_OFFSET[socket_id]
         move_offset = self._tree_pos_to_xy([move_offset_tx, move_offset_ty], offset=True)
+        self.log.debug('Offset navigation with %s' % move_offset)
 
         socket_tx, socket_ty = SOCKETS[socket_id]
         socket_xy = self._tree_pos_to_xy([socket_tx, socket_ty])
@@ -396,6 +398,17 @@ class TreeNavigator:
         self.input_handler.rnd_sleep(min=150, mean=200, sigma=100)
         return item_name, item_desc
 
+    def _reset_tree(self):
+        self._move_screen_to_socket(9)
+        self._move_screen_to_socket(1)
+        socket_xy = self._tree_pos_to_xy([0, -780])
+        self.input_handler.click(*socket_xy, *socket_xy, button='left', raw=True, speed_factor=1)
+        self.input_handler.rnd_sleep(min=150, mean=200, sigma=100)
+        self.ingame_pos = [0, 0]
+        socket_xy = self._tree_pos_to_xy([0, -800])
+        self.input_handler.click(*socket_xy, *socket_xy, button='left', raw=True, speed_factor=1)
+        return
+
     def generate_good_strings(self, files):
         mods = {}
         names = {}
@@ -451,15 +464,23 @@ class OCR:
 
     @staticmethod
     def imageToStringArray(img):
-        t = pytesseract.image_to_string(img, lang='eng', \
-            config='--oem 3 --psm 12 poe')
-        t = t.replace("\n\n", "\n")
-        lines = t.split("\n")
-        return lines
+        try:
+            t = pytesseract.image_to_string(img, lang='eng', \
+                config='--oem 3 --psm 12 poe')
+            t = t.replace("\n\n", "\n")
+            lines = t.split("\n")
+            return lines
+        except Exception as e:
+            print('{}: {}'.format(e.__class__.__name__, e))
+            raise Exception('{}: {}'.format(e.__class__.__name__, e))
 
     @staticmethod
     def node_to_strings(node):
-        img = node['stats']
-        filt_img = OCR.getFilteredImage(img)
-        text = OCR.imageToStringArray(filt_img)
-        return {'location': node['location'], 'stats': text}
+        try:
+            img = node['stats']
+            filt_img = OCR.getFilteredImage(img)
+            text = OCR.imageToStringArray(filt_img)
+            return {'location': node['location'], 'stats': text}
+        except Exception as e:
+            print('{}: {}'.format(e.__class__.__name__, e))
+            raise Exception('{}: {}'.format(e.__class__.__name__, e))

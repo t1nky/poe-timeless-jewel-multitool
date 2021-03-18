@@ -89,19 +89,22 @@ class ModSearch(object):
             # Select mods that are deviating the most from the mean of that mod
             # which should be some form of metric for how interesting the jewel is
             notable_mods = sorted(jewel['summed_mods'].items(),
-                                  key=lambda v: -1 * v[1] / self.mean_mod_values[v[0]])
+                                  key=lambda v: 0 if self.mean_mod_values[v[0]] == 0 else -1 * v[1] / self.mean_mod_values[v[0]])
             top_mods = notable_mods[:self.config['n_notable_mods_to_display']]
             mods_with_name = self._get_candidates([(m[0], 1) for m in top_mods])
             jewel['searched_mods'] = []
             jewel['sum'] = 0
             for mod_data in mods_with_name:
-                actual_name = mod_data[1]
-                actual_name = self._replace_value(actual_name)
-                value = round(jewel['summed_mods'][mod_data[0]], 3)
-                jewel['sum'] += value
-                display_mod = re.sub('<VALUE>', str(value), actual_name, count=1)
-                jewel['searched_mods'].append(display_mod)
-
+                try:
+                    actual_name = mod_data[1]
+                    actual_name = self._replace_value(actual_name)
+                    value = round(jewel['summed_mods'][mod_data[0]], 3)
+                    jewel['sum'] += value
+                    display_mod = re.sub('<VALUE>', str(value), actual_name, count=1)
+                    jewel['searched_mods'].append(display_mod)
+                except:
+                	# TODO: Add logging
+                    pass
             docs_to_return.append(jewel)
 
         return [dumps(docs_to_return)]

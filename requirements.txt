@@ -4,8 +4,8 @@ pyautogui==0.9.47
 numpy==1.17.0
 keyboard==0.13.3
 pypiwin32==223
-opencv-contrib-python==4.1.0.25
+opencv-contrib-python==4.5.1.48
 pytesseract==0.2.7
-python-Levenshtein-wheels==0.13.1
+python-Levenshtein-wheels==0.13.2
 cherrypy==18.1.2
 tqdm==4.32.2
